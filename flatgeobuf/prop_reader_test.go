@@ -482,14 +482,13 @@ func TestPropReader_ReadSchema(t *testing.T) {
 			schema.
 				On("ColumnsLength").
 				Return(1)
-			var b bytes.Buffer
-			r := NewPropReader(&b)
+			r := NewPropReader(bytes.NewReader([]byte{0x00}))
 
 			pvs, err := r.ReadSchema(schema)
 
 			assert.Nil(t, pvs)
-			assert.EqualError(t, err, "flatgeobuf: failed to read column index (for property 0 of 1): EOF")
-			assert.ErrorIs(t, err, io.EOF)
+			assert.EqualError(t, err, "flatgeobuf: failed to read column index (for property 0 of 1): unexpected EOF")
+			assert.ErrorIs(t, err, io.ErrUnexpectedEOF)
 			schema.AssertExpectations(t)
 		})
 
@@ -596,6 +595,29 @@ func TestPropReader_ReadSchema(t *testing.T) {
 					}
 				})
 			}
+		})
+
+		t.Run("Missing Columns", func(t *testing.T) {
+			schema := simpleSchema{
+				{name: "nullable", ct: flat.ColumnTypeString},
+				{name: "present", ct: flat.ColumnTypeUInt},
+			}
+			var b bytes.Buffer
+			w := NewPropWriter(&b)
+			_, err := w.WriteUShort(1)
+			require.NoError(t, err)
+			_, err = w.WriteUInt(42)
+			require.NoError(t, err)
+
+			r := NewPropReader(&b)
+			pvs, err := r.ReadSchema(schema)
+
+			require.NoError(t, err)
+			require.Len(t, pvs, 1)
+			assert.Equal(t, "present", string(pvs[0].Col.Name()))
+			assert.Equal(t, flat.ColumnTypeUInt, pvs[0].Type)
+			assert.Equal(t, uint16(1), pvs[0].ColIndex)
+			assert.Equal(t, uint32(42), pvs[0].Value)
 		})
 
 		t.Run("All", func(t *testing.T) {

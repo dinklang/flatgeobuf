@@ -400,7 +400,7 @@ func TestFeatureString(t *testing.T) {
 					},
 				},
 			},
-			expected: "Feature{error: properties: flatgeobuf: failed to read column index (for property 0 of 1): EOF}",
+			expected: "Feature{Geometry:<nil>,Properties:{},Columns:1}",
 		},
 		{
 			name: "Header Columns.No Property Bytes",
@@ -411,7 +411,7 @@ func TestFeatureString(t *testing.T) {
 					Return(1).
 					Twice()
 			},
-			expected: "Feature{error: properties: flatgeobuf: failed to read column index (for property 0 of 1): EOF}",
+			expected: "Feature{Geometry:<nil>,Properties:{}}",
 		},
 		{
 			name: "Properties.No Columns",

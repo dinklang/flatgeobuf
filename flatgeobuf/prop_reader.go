@@ -254,8 +254,13 @@ func (val PropValue) String() string {
 	return b.String()
 }
 
-// ReadSchema all properties specified in the given Schema, returning
-// them as a slice of PropValue structures.
+// ReadSchema reads all properties from the underlying property buffer
+// using the given Schema, returning them as a slice of PropValue
+// structures.
+//
+// Only properties serialized in the buffer are returned. Nullable
+// columns omitted from the buffer (e.g. null values) are not included
+// in the result.
 //
 // The concrete implementation of the schema will typically be a
 // *flat.Header or a *flat.Feature.
@@ -268,10 +273,16 @@ func (r *PropReader) ReadSchema(schema Schema) ([]PropValue, error) {
 		return nil, wrapErr("failed to read schema column count", err)
 	}
 	vals := make([]PropValue, 0, n)
+	if n == 0 {
+		return vals, nil
+	}
 
-	for i := 0; i < n; i++ {
+	for i := 0; ; i++ {
 		col, err := r.ReadUShort()
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			return nil, wrapErr("failed to read column index (for property %d of %d)", err, i, n)
 		}
 		j := int(col)
